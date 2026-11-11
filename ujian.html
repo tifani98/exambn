@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>Ujian - Nama Mapel</title>
+<style>
+  body,html{margin:0;padding:0;height:100%;font-family:Arial,sans-serif;background:#111}
+  #examIframe{width:100%;height:100%;border:0;display:block}
+  @supports (height:100dvh){ #examIframe{height:100dvh} }
+  .overlay{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;justify-content:center;align-items:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch;background:rgba(0,0,0,0.92);z-index:9999;padding:16px;box-sizing:border-box}
+  .card{background:#fff;padding:0;border-radius:12px;max-width:480px;width:100%;margin:auto;text-align:center;overflow:hidden;box-shadow:0 0 60px rgba(192,57,43,0.25)}
+  .card-header{background:#c0392b;color:#fff;padding:20px 22px 16px;text-align:left}
+  .card-header .icon{font-size:30px;display:block;margin-bottom:6px}
+  .card-header h2{margin:0;font-size:18px;letter-spacing:.02em}
+  .card-body{padding:20px 22px 24px;text-align:left}
+  .rule-list{list-style:none;margin:0 0 16px;padding:0}
+  .rule-list li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:#333;margin-bottom:10px;line-height:1.4}
+  .rule-list .tag{flex:0 0 auto;font-size:10.5px;font-weight:bold;color:#fff;padding:2px 7px;border-radius:4px;white-space:nowrap;margin-top:1px}
+  .tag-warn{background:#e67e22}
+  .tag-lock{background:#c0392b}
+  .tag-ban{background:#111}
+  .tag-info{background:#1b6ea8}
+  .btn{width:100%;padding:14px;border-radius:8px;background:#c0392b;color:#fff;border:0;font-size:16px;font-weight:bold;cursor:pointer;letter-spacing:.02em}
+  .btn:hover{background:#a5301f}
+  .btn:disabled{background:#999;cursor:not-allowed}
+  #warnModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;overflow-y:auto;z-index:9998;justify-content:center;align-items:center;background:rgba(0,0,0,0.75)}
+  #warnCard{background:#fff;padding:0;border-radius:12px;text-align:left;max-width:400px;width:90%;margin:auto;overflow:hidden;animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+  .lockout-time{font-size:44px;font-weight:bold;color:#c0392b;margin:16px 0;letter-spacing:.03em;text-align:center;font-variant-numeric:tabular-nums}
+  .field{text-align:left;margin-bottom:14px;font-size:14px}
+  .field label{display:flex;align-items:flex-start;gap:8px;font-size:13.5px;color:#222;line-height:1.4}
+  .field input[type=checkbox]{margin-top:2px;width:16px;height:16px;flex:0 0 auto}
+  .field input[type=text]{width:100%;box-sizing:border-box;padding:11px 12px;font-size:16px;border:1px solid #bbb;border-radius:8px}
+  .field .lbl{display:block;font-weight:bold;margin-bottom:6px;color:#222;font-size:13.5px}
+  small{color:#777}
+  code{background:#f2f2f2;padding:1px 5px;border-radius:4px;font-size:12.5px;word-break:break-all}
+  .consent-box{background:#fdf2f2;border:1px solid #f0c4c0;border-radius:8px;padding:10px 12px;margin-bottom:16px}
+  #monitorBadge{
+    position:fixed; top:10px; right:10px; z-index:9997;
+    background:rgba(20,20,20,0.88); color:#fff; font-family:Arial,sans-serif;
+    font-size:11.5px; padding:8px 12px; border-radius:20px;
+    display:none; align-items:center; gap:8px; box-shadow:0 2px 10px rgba(0,0,0,0.4);
+    pointer-events:none;
+  }
+  #monitorBadge.show{display:flex}
+  @media (max-width:520px){
+    #monitorBadge{top:6px;right:6px;padding:5px 9px;font-size:10px;gap:6px}
+    .card-header,.card-body{padding-left:16px;padding-right:16px}
+    .lockout-time{font-size:36px}
+    .rule-list li{font-size:13px}
+  }
+  .dot{width:9px;height:9px;border-radius:50%;background:#e74c3c;animation:pulse 1.3s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(231,76,60,.6)}70%{box-shadow:0 0 0 8px rgba(231,76,60,0)}100%{box-shadow:0 0 0 0 rgba(231,76,60,0)}}
+</style>
+</head>
+<body>
+
+<iframe id="examIframe" src="about:blank" allowfullscreen style="display:none"></iframe>
+
+<div id="monitorBadge">
+  <span class="dot"></span>
+  <span>PENGAWASAN AKTIF &nbsp;•&nbsp; Pelanggaran: <b id="badgeV">0</b>/<span id="badgeMaxV">3</span></span>
+</div>
+
+<!-- layar mulai -->
+<div id="startOverlay" class="overlay">
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">⚠️</span>
+      <h2>KETENTUAN PELAKSANAAN UJIAN</h2>
+    </div>
+    <div class="card-body">
+      <p style="font-size:13.5px;color:#444;margin-top:0">
+        Sistem pengawasan <b>memantau aktivitas peramban Anda</b> selama ujian berlangsung, meliputi
+        perpindahan tab atau aplikasi, keluar dari mode layar penuh, dan pembukaan ujian pada lebih dari satu jendela.
+        Setiap pelanggaran dicatat beserta waktu kejadian dan ID sesi<span data-mode="server">, serta dapat ditinjau oleh pengawas</span>.
+      </p>
+
+      <ul class="rule-list">
+        <li><span class="tag tag-warn">TEGURAN</span> Pelanggaran ke-1 dan ke-2: peringatan disertai pencatatan pada log pengawasan.</li>
+        <li><span class="tag tag-lock">PENGUNCIAN</span> Pelanggaran ke-3: ujian dikunci secara otomatis. Waktu ujian <b>tetap berjalan</b> selama penguncian, sehingga waktu pengerjaan Anda berkurang.</li>
+        <li><span class="tag tag-ban">BERTINGKAT</span> Setiap penguncian berikutnya berlangsung lebih lama: <b>30 menit, 50 menit, 1 jam 10 menit, 1 jam 30 menit</b>, dan seterusnya.</li>
+        <li data-mode="server"><span class="tag tag-info">DOKUMENTASI</span> Waktu kejadian, jenis pelanggaran, dan ID sesi tersimpan pada sistem pengawasan dan menjadi dasar tindak lanjut oleh sekolah.</li>
+      </ul>
+
+      <div class="consent-box">
+        <div class="field" style="margin-bottom:0">
+          <label><input type="checkbox" id="confirmLogin">
+            Saya telah membaca dan memahami ketentuan di atas, serta bersedia menerima sanksi sesuai tata tertib sekolah apabila terbukti melanggar.
+          </label>
+        </div>
+      </div>
+
+      <button id="startBtn" class="btn">MULAI UJIAN</button>
+      <p style="font-size:12px;color:#777;margin:12px 0 0;text-align:center">ID sesi: <code id="startToken">-</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- layar lockout sementara -->
+<div id="lockOverlay" class="overlay" style="display:none">
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">🔒</span>
+      <h2>UJIAN DIKUNCI SEMENTARA</h2>
+    </div>
+    <div class="card-body">
+      <p style="font-size:13.5px;color:#444;margin-top:0">
+        Sistem mencatat <b>pelanggaran berulang</b> pada sesi Anda (ID sesi: <code id="lockToken">-</code>).
+        <span data-mode="server">Kejadian ini telah tersimpan pada sistem pengawasan dan akan ditinjau oleh pengawas.</span>
+      </p>
+      <p id="lockInfo" style="font-size:13px;color:#444;background:#fdf2f2;border:1px solid #f0c4c0;border-radius:8px;padding:8px 10px"></p>
+      <p style="font-size:13px;color:#c0392b;font-weight:bold;margin-bottom:0">Ujian akan terbuka kembali secara otomatis dalam:</p>
+      <div class="lockout-time" id="lockCountdown">30:00</div>
+      <p style="font-size:12.5px;color:#777;text-align:center;margin:0">
+        ⏱️ Waktu ujian <b>tetap berjalan</b> selama masa penguncian.<br>
+        Mohon tidak menutup halaman ini. Jika halaman termuat ulang, penguncian tetap berlanjut.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- layar blokir permanen -->
+<div id="banOverlay" class="overlay" style="display:none">
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">⛔</span>
+      <h2>SESI UJIAN DITUTUP</h2>
+    </div>
+    <div class="card-body">
+      <p style="font-size:13.5px;color:#444;margin-top:0">
+        Akses ujian pada sesi ini telah ditutup dan tidak dapat dibuka kembali secara otomatis.
+      </p>
+      <p style="font-size:13.5px;color:#c0392b;font-weight:bold">
+        Silakan menghubungi pengawas atau guru mata pelajaran untuk tindak lanjut.
+        Sebutkan ID sesi Anda: <code id="banToken">-</code>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- modal peringatan -->
+<div id="warnModal">
+  <div id="warnCard">
+    <div class="card-header">
+      <span class="icon">🚨</span>
+      <h2>PELANGGARAN TERCATAT</h2>
+    </div>
+    <div class="card-body">
+      <p id="warnText" style="margin-top:0;font-size:14px;color:#333"></p>
+      <p style="font-size:13px;color:#666">
+        Jumlah pelanggaran pada sesi ini: <b id="warnCount">0</b> dari <span id="maxVDisplay">3</span><br>
+        <span data-mode="server">Kejadian ini telah tercatat pada sistem pengawasan.</span>
+      </p>
+      <button class="btn" onclick="closeWarn()">SAYA MENGERTI</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ====== KONFIGURASI (yang perlu diubah per mapel/ujian ada di sini) ====== */
+const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeHwzLQrdzi_DPj1SugPnCIaof1zlrGu87orvLbTzD4d3ujIA/viewform?embedded=true';
+const SAFE_KEY = 'B_INDONESIA_10';     // kode unik per ujian. GANTI setiap ada sesi ujian baru (supaya timer & pelanggaran mulai dari nol)
+const MAPEL_LABEL = 'Bahasa Indonesia Kelas 10'; // nama yang muncul di log
+const MAX_V = 3;                       // pelanggaran sebelum lockout
+const THRESHOLD_MS = 1200;             // durasi minimal kehilangan fokus dianggap pelanggaran
+const GRACE_MS = 8000;                 // toleransi di awal untuk proses login/verifikasi form
+const LOCKOUT_BASE_MS = 30 * 60 * 1000; // lockout pertama: 30 menit
+const LOCKOUT_STEP_MS = 20 * 60 * 1000; // tiap lockout berikutnya +20 menit (30 → 50 → 70 → 90 ...)
+const DURASI_UJIAN_MS = 90 * 60 * 1000; // total waktu ujian (wall-clock, termasuk saat lockout)
+const WEBHOOK_LOG_URL = '';            // isi URL /exec Apps Script (lihat file log-ujian.gs) untuk mencatat ke Google Sheet
+/* ======================================================================== */
+
+const iframe = document.getElementById('examIframe');
+const startOverlay = document.getElementById('startOverlay');
+const lockOverlay = document.getElementById('lockOverlay');
+const banOverlay = document.getElementById('banOverlay');
+const lockCountdown = document.getElementById('lockCountdown');
+const startBtn = document.getElementById('startBtn');
+const warnModal = document.getElementById('warnModal');
+const warnText = document.getElementById('warnText');
+const warnCount = document.getElementById('warnCount');
+const badge = document.getElementById('monitorBadge');
+const badgeV = document.getElementById('badgeV');
+document.getElementById('maxVDisplay').textContent = MAX_V;
+document.getElementById('badgeMaxV').textContent = MAX_V;
+document.getElementById('examIframe').setAttribute('title', 'Ujian ' + MAPEL_LABEL);
+document.title = 'Ujian - ' + MAPEL_LABEL;
+// teks tentang "sistem pengawasan" hanya tampil bila pencatatan ke server (Apps Script) diaktifkan
+document.querySelectorAll('[data-mode="server"]').forEach(el => { if(!WEBHOOK_LOG_URL) el.style.display = 'none'; });
+
+/* ---------- penyimpanan aman (tetap jalan walau localStorage diblokir) ---------- */
+const mem = {};
+function lsGet(k){
+  try{ const v = localStorage.getItem(k); if(v !== null) return v; }catch(e){}
+  return (k in mem) ? mem[k] : null;
+}
+function lsSet(k, v){
+  mem[k] = String(v);
+  try{ localStorage.setItem(k, String(v)); }catch(e){}
+}
+function lsDel(k){
+  delete mem[k];
+  try{ localStorage.removeItem(k); }catch(e){}
+}
+
+const K = {
+  v: SAFE_KEY + '_v',
+  lastInc: SAFE_KEY + '_lastinc',
+  lockedUntil: SAFE_KEY + '_locked_until',
+  lockoutCount: SAFE_KEY + '_lockout_count',
+  banned: SAFE_KEY + '_banned',
+  lockedDur: SAFE_KEY + '_locked_dur',
+  examEndsAt: SAFE_KEY + '_exam_ends_at',
+  sid: SAFE_KEY + '_sid',
+  tab: SAFE_KEY + '_tab'
+};
+
+/* ---------- ID sesi unik (dibuat otomatis, disimpan di perangkat) ---------- */
+function genId(){
+  let r = '';
+  try{
+    const a = new Uint8Array(8);
+    crypto.getRandomValues(a);
+    r = Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
+  }catch(e){
+    r = (Math.random().toString(16).slice(2) + Date.now().toString(16)).padEnd(12, '0');
+  }
+  return r.slice(0, 12).toUpperCase();
+}
+let sessionToken = lsGet(K.sid);
+if(!sessionToken){ sessionToken = SAFE_KEY + '-' + genId(); lsSet(K.sid, sessionToken); }
+document.getElementById('startToken').textContent = sessionToken;
+
+let monitoringActive = false;
+let blurStart = 0;
+let fsActive = false;
+let lockTimer = null;
+let iframeLoaded = false;
+
+function getV(){ return parseInt(lsGet(K.v) || '0') || 0; }
+function setV(n){ lsSet(K.v, n); warnCount.textContent = String(n); badgeV.textContent = String(n); }
+function lockoutDurationMs(n){ return LOCKOUT_BASE_MS + (n - 1) * LOCKOUT_STEP_MS; }
+function fmtMenit(ms){
+  const m = Math.round(ms / 60000), j = Math.floor(m / 60), r = m % 60;
+  if(j && r) return j + ' jam ' + r + ' menit';
+  if(j) return j + ' jam';
+  return m + ' menit';
+}
+function getLockoutCount(){ return parseInt(lsGet(K.lockoutCount) || '0') || 0; }
+function isBanned(){ return lsGet(K.banned) === '1'; }
+function getEndsAt(){ return parseInt(lsGet(K.examEndsAt) || '0') || 0; }
+
+function ensureExamEndTime(){
+  if(!getEndsAt()){ lsSet(K.examEndsAt, Date.now() + DURASI_UJIAN_MS); }
+  return getEndsAt();
+}
+function isExamOver(){
+  const e = getEndsAt();
+  return !!(e && Date.now() >= e);
+}
+
+function loadForm(){
+  if(iframeLoaded) return;
+  iframe.src = FORM_URL;
+  iframeLoaded = true;
+}
+
+/* ---------- pencatatan ke server (Google Sheet via Apps Script) ---------- */
+function sendLog(eventName, extra){
+  if(!WEBHOOK_LOG_URL) return;
+  try{
+    const payload = JSON.stringify(Object.assign({
+      token: sessionToken,
+      mapel: MAPEL_LABEL,
+      ujian: SAFE_KEY,
+      event: eventName,
+      pelanggaran: getV(),
+      penguncian: getLockoutCount(),
+      waktu: new Date().toISOString(),
+      layar: window.innerWidth + 'x' + window.innerHeight,
+      ua: navigator.userAgent
+    }, extra || {}));
+    fetch(WEBHOOK_LOG_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: {'Content-Type': 'text/plain'},
+      body: payload, keepalive: true
+    }).catch(() => {});
+  }catch(e){}
+}
+
+/* ---------- monitoring ---------- */
+function startMonitoring(){
+  badge.classList.add('show');
+  blurStart = 0;
+  setTimeout(() => { monitoringActive = true; }, GRACE_MS);
+}
+function hideBadge(){ badge.classList.remove('show'); }
+
+/* ---------- alur lockout ---------- */
+function triggerLockout(){
+  const lc = getLockoutCount() + 1;
+  const dur = lockoutDurationMs(lc);
+  const until = Date.now() + dur;
+  lsSet(K.lockedUntil, until);
+  lsSet(K.lockoutCount, lc);
+  lsSet(K.lockedDur, dur);
+  sendLog('lockout_start', {siklus: lc, menit: Math.round(dur / 60000)});
+  setV(0);
+  showLockScreen(until);
+}
+
+function showLockScreen(until){
+  monitoringActive = false;
+  hideBadge();
+  warnModal.style.display = 'none';
+  document.getElementById('lockToken').textContent = sessionToken;
+  const lc = Math.max(getLockoutCount(), 1);
+  const durNow = parseInt(lsGet(K.lockedDur) || '0') || lockoutDurationMs(lc);
+  document.getElementById('lockInfo').textContent =
+    'Penguncian ke-' + lc + ' berdurasi ' + fmtMenit(durNow) +
+    '. Pelanggaran berikutnya akan dikenai penguncian yang lebih lama.';
+  iframe.style.display = 'none';
+  startOverlay.style.display = 'none';
+  banOverlay.style.display = 'none';
+  lockOverlay.style.display = 'flex';
+
+  if(lockTimer) clearInterval(lockTimer);
+  const render = () => {
+    const remain = until - Date.now();
+    if(remain <= 0){
+      clearInterval(lockTimer); lockTimer = null;
+      lsDel(K.lockedUntil);
+      resumeAfterLockout();
+      return;
+    }
+    const m = Math.floor(remain / 60000), s = Math.floor((remain % 60000) / 1000);
+    lockCountdown.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  };
+  render();
+  if(lockTimer === null && until - Date.now() > 0){ lockTimer = setInterval(render, 500); }
+}
+
+function resumeAfterLockout(){
+  sendLog('lockout_end_resume');
+  lockOverlay.style.display = 'none';
+  loadForm();                       // penting: kalau halaman sempat dimuat ulang, form dimuat lagi
+  iframe.style.display = 'block';
+  if(!isExamOver()) startMonitoring();
+}
+
+function showBanned(){
+  monitoringActive = false;
+  hideBadge();
+  document.getElementById('banToken').textContent = sessionToken;
+  iframe.style.display = 'none';
+  startOverlay.style.display = 'none';
+  lockOverlay.style.display = 'none';
+  banOverlay.style.display = 'flex';
+}
+
+function checkExamExpired(){
+  if(isExamOver()){
+    if(monitoringActive){ sendLog('time_up'); }
+    monitoringActive = false;
+    hideBadge();
+    return true;   // iframe dibiarkan terlihat supaya siswa bisa menekan "Kirim" terakhir
+  }
+  return false;
+}
+
+/* ---------- deteksi pelanggaran ---------- */
+function safeInc(reason){
+  if(!monitoringActive) return;
+  if(checkExamExpired()) return;
+  const now = Date.now();
+  const last = parseInt(lsGet(K.lastInc) || '0') || 0;
+  if(now - last < 800) return;
+  lsSet(K.lastInc, now);
+
+  const v = getV() + 1;
+  setV(v);
+  sendLog('pelanggaran', {alasan: reason});
+  if(v >= MAX_V){
+    triggerLockout();
+  } else {
+    showWarn('Terdeteksi: ' + reason + '. Ini merupakan pelanggaran ke-' + v + ' dari ' + MAX_V +
+      '. Pelanggaran ke-' + MAX_V + ' mengakibatkan ujian dikunci selama ' +
+      fmtMenit(lockoutDurationMs(getLockoutCount() + 1)) + '.');
+  }
+}
+
+function showWarn(msg){ warnText.textContent = msg; warnModal.style.display = 'flex'; }
+function closeWarn(){
+  warnModal.style.display = 'none';
+  if(fsActive && !document.fullscreenElement && !document.webkitFullscreenElement){ enterFullscreen(); }
+}
+async function enterFullscreen(){
+  try{
+    const el = document.documentElement;
+    if(el.requestFullscreen) await el.requestFullscreen();
+    else if(el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+  }catch(err){}
+}
+
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden){ blurStart = Date.now(); }
+  else if(blurStart){
+    const dt = Date.now() - blurStart; blurStart = 0;
+    if(dt > THRESHOLD_MS) safeInc('meninggalkan halaman ujian (berpindah tab atau aplikasi)');
+  }
+});
+// Klik di dalam iframe gform membuat window 'blur' padahal siswa tidak keluar → cek activeElement dulu
+window.addEventListener('blur', () => {
+  if(!monitoringActive) return;
+  setTimeout(() => {
+    if(document.activeElement === iframe) return;
+    if(!blurStart) blurStart = Date.now();
+  }, 0);
+});
+window.addEventListener('focus', () => {
+  if(blurStart){
+    const dt = Date.now() - blurStart; blurStart = 0;
+    if(dt > THRESHOLD_MS) safeInc('halaman ujian kehilangan fokus');
+  }
+});
+
+function onFsChange(){
+  const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if(!inFs && fsActive) safeInc('keluar dari mode layar penuh');
+}
+document.addEventListener('fullscreenchange', onFsChange);
+document.addEventListener('webkitfullscreenchange', onFsChange);
+
+// Halaman "membeku" (overlay/asisten/split-screen): hanya dicatat untuk ditinjau
+let lastTick = Date.now();
+setInterval(() => {
+  const now = Date.now();
+  if(monitoringActive && !document.hidden && now - lastTick > 4000) sendLog('freeze_flag_review', {gap_ms: now - lastTick});
+  lastTick = now;
+}, 1000);
+
+// Ujian dibuka di 2 tab pada browser yang sama
+const TAB_ID = Math.random().toString(36).slice(2);
+setInterval(() => {
+  if(!monitoringActive) return;
+  const other = lsGet(K.tab);
+  const parts = (other || '|0').split('|');
+  const id = parts[0], ts = parseInt(parts[1]) || 0;
+  if(id && id !== TAB_ID && Date.now() - ts < 4000) safeInc('ujian dibuka pada lebih dari satu tab');
+  lsSet(K.tab, TAB_ID + '|' + Date.now());
+}, 2000);
+
+// Muat ulang / tutup halaman: hanya dicatat (tidak menambah hitungan) supaya refresh tidak dianggap pelanggaran
+window.addEventListener('pagehide', () => { if(monitoringActive) sendLog('pagehide_flag_review'); });
+
+// Perubahan ukuran layar: hanya dicatat
+let lastW = window.innerWidth, lastH = window.innerHeight;
+window.addEventListener('resize', () => {
+  if(!monitoringActive) return;
+  const dw = Math.abs(window.innerWidth - lastW), dh = Math.abs(window.innerHeight - lastH);
+  if(dw > 100 || dh > 150) sendLog('resize_flag_review');
+  lastW = window.innerWidth; lastH = window.innerHeight;
+});
+
+document.addEventListener('keydown', (e) => {
+  const k = (e.key || '').toLowerCase();
+  if(k === 'f12' || (e.ctrlKey && k === 'u') || (e.ctrlKey && e.shiftKey && (k === 'i' || k === 'j'))){
+    e.preventDefault();
+    safeInc('penggunaan pintasan keyboard yang dilarang');
+  }
+});
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ---------- start ---------- */
+startBtn.addEventListener('click', async () => {
+  if(!document.getElementById('confirmLogin').checked){
+    alert('Silakan centang pernyataan persetujuan terlebih dahulu.'); return;
+  }
+  ensureExamEndTime();
+  loadForm();
+  iframe.style.display = 'block';
+  startOverlay.style.display = 'none';
+  sendLog('start');
+  await enterFullscreen();
+  fsActive = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  startMonitoring();
+});
+
+/* ---------- pemulihan state saat halaman dibuka/refresh ---------- */
+(function init(){
+  warnCount.textContent = String(getV());
+  badgeV.textContent = String(getV());
+
+  if(isBanned()){ showBanned(); return; }
+
+  const endsAt = getEndsAt();
+
+  if(endsAt && isExamOver()){
+    // waktu habis: tampilkan form supaya siswa bisa mengirim jawaban, tanpa pemantauan
+    lsDel(K.lockedUntil);
+    startOverlay.style.display = 'none';
+    loadForm();
+    iframe.style.display = 'block';
+    return;
+  }
+
+  const lockedUntil = parseInt(lsGet(K.lockedUntil) || '0') || 0;
+  if(lockedUntil && Date.now() < lockedUntil){
+    startOverlay.style.display = 'none';
+    showLockScreen(lockedUntil);
+    return;
+  }
+  if(lockedUntil){ lsDel(K.lockedUntil); }
+
+  if(endsAt){
+    // sesi sudah pernah dimulai (misal reload) → langsung lanjut
+    startOverlay.style.display = 'none';
+    loadForm();
+    iframe.style.display = 'block';
+    sendLog('reload_resume');
+    startMonitoring();
+  }
+})();
+</script>
+</body>
+</html>
